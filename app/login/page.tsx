@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useState } from 'react';
+
 
 export default function LoginPage() {
   const [role, setRole] = useState<'pelanggan' | 'admin'>('pelanggan');
@@ -95,9 +97,9 @@ export default function LoginPage() {
           {role === 'pelanggan' && (
             <p className="text-center text-xs text-gray-500 mt-4">
               Belum punya akun?{' '}
-              <a href="/register" className="text-blue-600 font-semibold hover:underline">
+              <Link href="/register" className="text-blue-600 font-semibold hover:underline">
                 Daftar Sekarang
-              </a>
+                </Link>
             </p>
           )}
         </form>
