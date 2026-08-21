@@ -32,9 +32,10 @@ export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedKtp, setSelectedKtp] = useState<string | null>(null);
 
-  // State Modal Tambah Mobil
+  // Modal Tambah Mobil
   const [isAddCarOpen, setIsAddCarOpen] = useState(false);
   const [carForm, setCarForm] = useState({
     name: '',
@@ -74,6 +75,16 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteBooking = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus pesanan ini?')) return;
+    const res = await fetch(`/api/admin/bookings?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setBookings((prev) => prev.filter((b) => b.id !== id));
+    } else {
+      alert('Gagal menghapus pesanan');
+    }
+  };
+
   const handleUpdateCarStatus = async (id: string, newStatus: string) => {
     const res = await fetch('/api/admin/cars', {
       method: 'PATCH',
@@ -85,6 +96,16 @@ export default function AdminDashboard() {
       setCars((prev) =>
         prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
       );
+    }
+  };
+
+  const handleDeleteCar = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus mobil ini dari sistem?')) return;
+    const res = await fetch(`/api/admin/cars?id=${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setCars((prev) => prev.filter((c) => c.id !== id));
+    } else {
+      alert('Gagal menghapus mobil');
     }
   };
 
@@ -110,6 +131,19 @@ export default function AdminDashboard() {
       alert('Gagal menambah mobil');
     }
   };
+
+  // Filter Data Berdasarkan Search
+  const filteredBookings = bookings.filter(
+    (b) =>
+      b.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      b.cars?.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredCars = cars.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const pendingCount = bookings.filter((b) => b.status === 'pending').length;
   const totalRevenue = bookings
@@ -159,9 +193,9 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Tab Navigation & Add Button */}
-        <div className="flex justify-between items-center border-b border-slate-200 mb-6 bg-white rounded-t-xl px-4 pt-2">
-          <div className="flex">
+        {/* Tab & Search Bar */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-200 mb-6 bg-white rounded-t-xl px-4 pt-2">
+          <div className="flex w-full md:w-auto">
             <button
               onClick={() => setActiveTab('bookings')}
               className={`px-6 py-3 font-semibold text-sm border-b-2 transition ${
@@ -184,14 +218,23 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {activeTab === 'cars' && (
-            <button
-              onClick={() => setIsAddCarOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg mb-2 transition"
-            >
-              + Tambah Armada Baru
-            </button>
-          )}
+          <div className="flex items-center gap-3 w-full md:w-auto pb-2 md:pb-0">
+            <input
+              type="text"
+              placeholder={`Cari ${activeTab === 'bookings' ? 'pelanggan/mobil...' : 'nama/tipe mobil...'}`}
+              className="p-2 text-xs border rounded-lg w-full md:w-64"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {activeTab === 'cars' && (
+              <button
+                onClick={() => setIsAddCarOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg whitespace-nowrap"
+              >
+                + Tambah Armada
+              </button>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -212,11 +255,11 @@ export default function AdminDashboard() {
                       <th className="p-4">Total Biaya</th>
                       <th className="p-4">Dokumen</th>
                       <th className="p-4">Status</th>
-                      <th className="p-4 text-center">Aksi / Verifikasi</th>
+                      <th className="p-4 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {bookings.map((booking) => (
+                    {filteredBookings.map((booking) => (
                       <tr key={booking.id} className="hover:bg-slate-50 transition">
                         <td className="p-4 font-bold text-slate-900">{booking.customer_name}</td>
                         <td className="p-4">{booking.cars?.name || 'Mobil N/A'}</td>
@@ -237,12 +280,15 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="p-4 text-center">
-                          {booking.status === 'pending' && (
-                            <div className="flex justify-center gap-1">
-                              <button onClick={() => handleUpdateBookingStatus(booking.id, 'approved')} className="bg-emerald-600 text-white text-xs px-2 py-1 rounded">Setujui</button>
-                              <button onClick={() => handleUpdateBookingStatus(booking.id, 'rejected')} className="bg-red-600 text-white text-xs px-2 py-1 rounded">Tolak</button>
-                            </div>
-                          )}
+                          <div className="flex justify-center gap-1">
+                            {booking.status === 'pending' && (
+                              <>
+                                <button onClick={() => handleUpdateBookingStatus(booking.id, 'approved')} className="bg-emerald-600 text-white text-xs px-2 py-1 rounded">Setujui</button>
+                                <button onClick={() => handleUpdateBookingStatus(booking.id, 'rejected')} className="bg-amber-600 text-white text-xs px-2 py-1 rounded">Tolak</button>
+                              </>
+                            )}
+                            <button onClick={() => handleDeleteBooking(booking.id)} className="bg-red-600 text-white text-xs px-2 py-1 rounded">Hapus</button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -261,11 +307,11 @@ export default function AdminDashboard() {
                       <th className="p-4">Kategori</th>
                       <th className="p-4">Harga / Hari</th>
                       <th className="p-4">Status Saat Ini</th>
-                      <th className="p-4 text-center">Ubah Ketersediaan</th>
+                      <th className="p-4 text-center">Aksi / Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {cars.map((car) => (
+                    {filteredCars.map((car) => (
                       <tr key={car.id} className="hover:bg-slate-50 transition">
                         <td className="p-4 font-bold text-slate-900">{car.name}</td>
                         <td className="p-4 text-slate-600">{car.type}</td>
@@ -273,45 +319,16 @@ export default function AdminDashboard() {
                           Rp {car.price_per_day.toLocaleString('id-ID')}
                         </td>
                         <td className="p-4">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                              car.status === 'available'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : car.status === 'rented'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-rose-100 text-rose-800'
-                            }`}
-                          >
-                            {car.status === 'available'
-                              ? 'TERSEDIA'
-                              : car.status === 'rented'
-                              ? 'DISEWA'
-                              : 'PERBAIKAN'}
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100">
+                            {car.status.toUpperCase()}
                           </span>
                         </td>
                         <td className="p-4">
-                          <div className="flex justify-center gap-2">
-                            <button
-                              disabled={car.status === 'available'}
-                              onClick={() => handleUpdateCarStatus(car.id, 'available')}
-                              className="bg-emerald-50 text-emerald-700 border border-emerald-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded font-medium"
-                            >
-                              Tersedia
-                            </button>
-                            <button
-                              disabled={car.status === 'rented'}
-                              onClick={() => handleUpdateCarStatus(car.id, 'rented')}
-                              className="bg-blue-50 text-blue-700 border border-blue-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded font-medium"
-                            >
-                              Disewa
-                            </button>
-                            <button
-                              disabled={car.status === 'maintenance'}
-                              onClick={() => handleUpdateCarStatus(car.id, 'maintenance')}
-                              className="bg-rose-50 text-rose-700 border border-rose-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded font-medium"
-                            >
-                              Perbaikan
-                            </button>
+                          <div className="flex justify-center gap-1">
+                            <button disabled={car.status === 'available'} onClick={() => handleUpdateCarStatus(car.id, 'available')} className="bg-emerald-50 text-emerald-700 border text-xs px-2 py-1 rounded disabled:opacity-40">Tersedia</button>
+                            <button disabled={car.status === 'rented'} onClick={() => handleUpdateCarStatus(car.id, 'rented')} className="bg-blue-50 text-blue-700 border text-xs px-2 py-1 rounded disabled:opacity-40">Disewa</button>
+                            <button disabled={car.status === 'maintenance'} onClick={() => handleUpdateCarStatus(car.id, 'maintenance')} className="bg-amber-50 text-amber-700 border text-xs px-2 py-1 rounded disabled:opacity-40">Perbaikan</button>
+                            <button onClick={() => handleDeleteCar(car.id)} className="bg-red-600 text-white text-xs px-2 py-1 rounded">Hapus</button>
                           </div>
                         </td>
                       </tr>
@@ -332,75 +349,33 @@ export default function AdminDashboard() {
             <form onSubmit={handleAddCar} className="space-y-4 text-sm">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Mobil</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Toyota Avanza"
-                  className="w-full p-2 border rounded-lg"
-                  value={carForm.name}
-                  onChange={(e) => setCarForm({ ...carForm, name: e.target.value })}
-                />
+                <input type="text" required placeholder="Toyota Avanza" className="w-full p-2 border rounded-lg" value={carForm.name} onChange={(e) => setCarForm({ ...carForm, name: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Tipe</label>
-                  <select
-                    className="w-full p-2 border rounded-lg"
-                    value={carForm.type}
-                    onChange={(e) => setCarForm({ ...carForm, type: e.target.value })}
-                  >
+                  <select className="w-full p-2 border rounded-lg" value={carForm.type} onChange={(e) => setCarForm({ ...carForm, type: e.target.value })}>
                     <option value="MPV">MPV</option>
                     <option value="SUV">SUV</option>
                     <option value="Sedan">Sedan</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kapasitas Kursi</label>
-                  <input
-                    type="number"
-                    required
-                    className="w-full p-2 border rounded-lg"
-                    value={carForm.capacity}
-                    onChange={(e) => setCarForm({ ...carForm, capacity: e.target.value })}
-                  />
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kapasitas</label>
+                  <input type="number" required className="w-full p-2 border rounded-lg" value={carForm.capacity} onChange={(e) => setCarForm({ ...carForm, capacity: e.target.value })} />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Harga Sewa / Hari (Rp)</label>
-                <input
-                  type="number"
-                  required
-                  placeholder="350000"
-                  className="w-full p-2 border rounded-lg"
-                  value={carForm.price_per_day}
-                  onChange={(e) => setCarForm({ ...carForm, price_per_day: e.target.value })}
-                />
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Harga / Hari (Rp)</label>
+                <input type="number" required placeholder="350000" className="w-full p-2 border rounded-lg" value={carForm.price_per_day} onChange={(e) => setCarForm({ ...carForm, price_per_day: e.target.value })} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">URL Foto Mobil</label>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full p-2 border rounded-lg"
-                  value={carForm.image_url}
-                  onChange={(e) => setCarForm({ ...carForm, image_url: e.target.value })}
-                />
+                <input type="url" required placeholder="https://..." className="w-full p-2 border rounded-lg" value={carForm.image_url} onChange={(e) => setCarForm({ ...carForm, image_url: e.target.value })} />
               </div>
               <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddCarOpen(false)}
-                  className="w-1/2 py-2 border rounded-lg hover:bg-slate-50 font-medium"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold"
-                >
-                  Simpan Mobil
-                </button>
+                <button type="button" onClick={() => setIsAddCarOpen(false)} className="w-1/2 py-2 border rounded-lg font-medium">Batal</button>
+                <button type="submit" className="w-1/2 bg-blue-600 text-white py-2 rounded-lg font-bold">Simpan</button>
               </div>
             </form>
           </div>

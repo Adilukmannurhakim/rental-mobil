@@ -26,3 +26,16 @@ export async function PATCH(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json(data);
 }
+
+// Tambahkan handler DELETE di akhir file app/api/admin/cars/route.ts
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) return NextResponse.json({ error: 'ID tidak ditemukan' }, { status: 400 });
+
+  const { error } = await supabase.from('cars').delete().eq('id', id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ message: 'Mobil berhasil dihapus' });
+}
