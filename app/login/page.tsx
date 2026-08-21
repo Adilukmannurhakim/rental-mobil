@@ -1,18 +1,17 @@
+'use client';
+
 import React, { useState } from 'react';
 
 export default function LoginPage() {
-  const [role, setRole] = useState('pelanggan'); // 'pelanggan' | 'admin'
+  const [role, setRole] = useState<'pelanggan' | 'admin'>('pelanggan');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
-  e.preventDefault();
-  // ...
+    e.preventDefault();
     if (role === 'admin') {
-      // Logic Login Admin -> redirect ke /admin
       window.location.href = '/admin';
     } else {
-      // Logic Login Pelanggan -> redirect ke /
       window.location.href = '/';
     }
   };
@@ -33,6 +32,7 @@ export default function LoginPage() {
         {/* Tab Switcher Role */}
         <div className="flex border-b border-gray-200 bg-gray-50">
           <button
+            type="button"
             onClick={() => setRole('pelanggan')}
             className={`flex-1 py-3 text-sm font-semibold transition-colors ${
               role === 'pelanggan'
@@ -43,6 +43,7 @@ export default function LoginPage() {
             Pelanggan
           </button>
           <button
+            type="button"
             onClick={() => setRole('admin')}
             className={`flex-1 py-3 text-sm font-semibold transition-colors ${
               role === 'admin'
