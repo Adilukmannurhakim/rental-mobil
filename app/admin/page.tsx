@@ -22,6 +22,8 @@ interface Car {
   name: string;
   type: string;
   price_per_day: number;
+  capacity: number;
+  image_url: string;
   status: string;
 }
 
@@ -31,6 +33,16 @@ export default function AdminDashboard() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedKtp, setSelectedKtp] = useState<string | null>(null);
+
+  // State Modal Tambah Mobil
+  const [isAddCarOpen, setIsAddCarOpen] = useState(false);
+  const [carForm, setCarForm] = useState({
+    name: '',
+    type: 'MPV',
+    price_per_day: '',
+    capacity: '7',
+    image_url: '',
+  });
 
   useEffect(() => {
     fetchData();
@@ -59,8 +71,6 @@ export default function AdminDashboard() {
       setBookings((prev) =>
         prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
       );
-    } else {
-      alert('Gagal memperbarui status pesanan');
     }
   };
 
@@ -75,12 +85,32 @@ export default function AdminDashboard() {
       setCars((prev) =>
         prev.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
       );
-    } else {
-      alert('Gagal memperbarui status armada');
     }
   };
 
-  // Stat Calculations
+  const handleAddCar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch('/api/cars/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...carForm,
+        price_per_day: Number(carForm.price_per_day),
+        capacity: Number(carForm.capacity),
+        status: 'available',
+      }),
+    });
+
+    if (res.ok) {
+      alert('Mobil berhasil ditambahkan!');
+      setIsAddCarOpen(false);
+      setCarForm({ name: '', type: 'MPV', price_per_day: '', capacity: '7', image_url: '' });
+      fetchData();
+    } else {
+      alert('Gagal menambah mobil');
+    }
+  };
+
   const pendingCount = bookings.filter((b) => b.status === 'pending').length;
   const totalRevenue = bookings
     .filter((b) => b.status === 'approved' || b.status === 'completed')
@@ -89,7 +119,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
-      {/* Top Navigation */}
       <header className="bg-slate-900 text-white px-8 py-4 flex justify-between items-center shadow-md">
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 text-white font-bold rounded-lg w-10 h-10 flex items-center justify-center">
@@ -111,51 +140,58 @@ export default function AdminDashboard() {
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
             <span className="text-xs font-semibold text-slate-500 uppercase">Perlu Verifikasi</span>
             <p className="text-3xl font-extrabold text-amber-500 mt-1">{pendingCount}</p>
-            <span className="text-xs text-slate-400 mt-1 block">Pesanan menunggu tindakan</span>
           </div>
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
             <span className="text-xs font-semibold text-slate-500 uppercase">Total Pesanan</span>
             <p className="text-3xl font-extrabold text-slate-800 mt-1">{bookings.length}</p>
-            <span className="text-xs text-slate-400 mt-1 block">Keseluruhan transaksi</span>
           </div>
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
             <span className="text-xs font-semibold text-slate-500 uppercase">Estimasi Omset</span>
             <p className="text-2xl font-extrabold text-emerald-600 mt-1">
               Rp {totalRevenue.toLocaleString('id-ID')}
             </p>
-            <span className="text-xs text-slate-400 mt-1 block">Dari transaksi disetujui</span>
           </div>
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
             <span className="text-xs font-semibold text-slate-500 uppercase">Armada Ready</span>
             <p className="text-3xl font-extrabold text-blue-600 mt-1">
               {availableCars} <span className="text-base font-normal text-slate-500">/ {cars.length}</span>
             </p>
-            <span className="text-xs text-slate-400 mt-1 block">Siap disewa</span>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 mb-6 bg-white rounded-t-xl px-4 pt-2">
-          <button
-            onClick={() => setActiveTab('bookings')}
-            className={`px-6 py-3 font-semibold text-sm border-b-2 transition ${
-              activeTab === 'bookings'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            📋 Verifikasi Pesanan ({bookings.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('cars')}
-            className={`px-6 py-3 font-semibold text-sm border-b-2 transition ${
-              activeTab === 'cars'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            🚗 Status Armada Mobil ({cars.length})
-          </button>
+        {/* Tab Navigation & Add Button */}
+        <div className="flex justify-between items-center border-b border-slate-200 mb-6 bg-white rounded-t-xl px-4 pt-2">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('bookings')}
+              className={`px-6 py-3 font-semibold text-sm border-b-2 transition ${
+                activeTab === 'bookings'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              📋 Verifikasi Pesanan ({bookings.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('cars')}
+              className={`px-6 py-3 font-semibold text-sm border-b-2 transition ${
+                activeTab === 'cars'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              🚗 Status Armada Mobil ({cars.length})
+            </button>
+          </div>
+
+          {activeTab === 'cars' && (
+            <button
+              onClick={() => setIsAddCarOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg mb-2 transition"
+            >
+              + Tambah Armada Baru
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -164,7 +200,7 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            {/* TAB 1: MANAJEMEN VERIFIKASI PESANAN */}
+            {/* TAB 1: VERIFIKASI PESANAN */}
             {activeTab === 'bookings' && (
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <table className="w-full text-left text-sm border-collapse">
@@ -182,34 +218,13 @@ export default function AdminDashboard() {
                   <tbody className="divide-y divide-slate-100">
                     {bookings.map((booking) => (
                       <tr key={booking.id} className="hover:bg-slate-50 transition">
-                        <td className="p-4">
-                          <p className="font-bold text-slate-900">{booking.customer_name}</p>
-                          <a
-                            href={`https://wa.me/${booking.customer_phone.replace(/[^0-9]/g, '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-blue-600 hover:underline"
-                          >
-                            💬 {booking.customer_phone}
-                          </a>
-                        </td>
-                        <td className="p-4">
-                          <p className="font-medium text-slate-800">{booking.cars?.name || 'Mobil N/A'}</p>
-                          <span className="text-xs text-slate-500">{booking.cars?.type}</span>
-                        </td>
-                        <td className="p-4 text-slate-600">
-                          {booking.start_date} <br />
-                          <span className="text-xs text-slate-400">s/d {booking.end_date}</span>
-                        </td>
-                        <td className="p-4 font-bold text-slate-900">
-                          Rp {Number(booking.total_price).toLocaleString('id-ID')}
-                        </td>
+                        <td className="p-4 font-bold text-slate-900">{booking.customer_name}</td>
+                        <td className="p-4">{booking.cars?.name || 'Mobil N/A'}</td>
+                        <td className="p-4 text-slate-600">{booking.start_date} s/d {booking.end_date}</td>
+                        <td className="p-4 font-bold">Rp {Number(booking.total_price).toLocaleString('id-ID')}</td>
                         <td className="p-4">
                           {booking.ktp_url ? (
-                            <button
-                              onClick={() => setSelectedKtp(booking.ktp_url!)}
-                              className="text-xs bg-slate-100 border border-slate-300 text-slate-700 px-2 py-1 rounded hover:bg-slate-200"
-                            >
+                            <button onClick={() => setSelectedKtp(booking.ktp_url!)} className="text-xs bg-slate-100 border px-2 py-1 rounded">
                               🔍 Lihat KTP
                             </button>
                           ) : (
@@ -217,50 +232,17 @@ export default function AdminDashboard() {
                           )}
                         </td>
                         <td className="p-4">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                              booking.status === 'pending'
-                                ? 'bg-amber-100 text-amber-800'
-                                : booking.status === 'approved'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : booking.status === 'completed'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}
-                          >
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100">
                             {booking.status.toUpperCase()}
                           </span>
                         </td>
-                        <td className="p-4">
-                          <div className="flex justify-center gap-1">
-                            {booking.status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => handleUpdateBookingStatus(booking.id, 'approved')}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded font-medium transition"
-                                >
-                                  Setujui
-                                </button>
-                                <button
-                                  onClick={() => handleUpdateBookingStatus(booking.id, 'rejected')}
-                                  className="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 rounded font-medium transition"
-                                >
-                                  Tolak
-                                </button>
-                              </>
-                            )}
-                            {booking.status === 'approved' && (
-                              <button
-                                onClick={() => handleUpdateBookingStatus(booking.id, 'completed')}
-                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded font-medium transition"
-                              >
-                                Selesaikan Sewa
-                              </button>
-                            )}
-                            {(booking.status === 'completed' || booking.status === 'rejected') && (
-                              <span className="text-xs text-slate-400 font-medium">Selesai</span>
-                            )}
-                          </div>
+                        <td className="p-4 text-center">
+                          {booking.status === 'pending' && (
+                            <div className="flex justify-center gap-1">
+                              <button onClick={() => handleUpdateBookingStatus(booking.id, 'approved')} className="bg-emerald-600 text-white text-xs px-2 py-1 rounded">Setujui</button>
+                              <button onClick={() => handleUpdateBookingStatus(booking.id, 'rejected')} className="bg-red-600 text-white text-xs px-2 py-1 rounded">Tolak</button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -269,7 +251,7 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* TAB 2: MANAJEMEN ARMADA MOBIL */}
+            {/* TAB 2: STATUS ARMADA MOBIL */}
             {activeTab === 'cars' && (
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <table className="w-full text-left text-sm border-collapse">
@@ -312,21 +294,21 @@ export default function AdminDashboard() {
                             <button
                               disabled={car.status === 'available'}
                               onClick={() => handleUpdateCarStatus(car.id, 'available')}
-                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded transition font-medium"
+                              className="bg-emerald-50 text-emerald-700 border border-emerald-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded font-medium"
                             >
                               Tersedia
                             </button>
                             <button
                               disabled={car.status === 'rented'}
                               onClick={() => handleUpdateCarStatus(car.id, 'rented')}
-                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded transition font-medium"
+                              className="bg-blue-50 text-blue-700 border border-blue-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded font-medium"
                             >
                               Disewa
                             </button>
                             <button
                               disabled={car.status === 'maintenance'}
                               onClick={() => handleUpdateCarStatus(car.id, 'maintenance')}
-                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded transition font-medium"
+                              className="bg-rose-50 text-rose-700 border border-rose-300 disabled:opacity-40 text-xs px-2.5 py-1 rounded font-medium"
                             >
                               Perbaikan
                             </button>
@@ -342,26 +324,85 @@ export default function AdminDashboard() {
         )}
       </main>
 
-      {/* Modal Preview KTP */}
-      {selectedKtp && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-4 max-w-lg w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-slate-800">Verifikasi Dokumen KTP</h3>
-              <button
-                onClick={() => setSelectedKtp(null)}
-                className="text-slate-400 hover:text-slate-700 font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            <img src={selectedKtp} alt="KTP Pelanggan" className="w-full rounded-lg border max-h-96 object-contain" />
-            <button
-              onClick={() => setSelectedKtp(null)}
-              className="mt-4 w-full bg-slate-800 text-white py-2 rounded-lg text-sm font-medium"
-            >
-              Tutup Preview
-            </button>
+      {/* Modal Tambah Mobil */}
+      {isAddCarOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-lg">
+            <h3 className="font-bold text-slate-900 text-lg mb-4">Tambah Armada Mobil Baru</h3>
+            <form onSubmit={handleAddCar} className="space-y-4 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Mobil</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Toyota Avanza"
+                  className="w-full p-2 border rounded-lg"
+                  value={carForm.name}
+                  onChange={(e) => setCarForm({ ...carForm, name: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tipe</label>
+                  <select
+                    className="w-full p-2 border rounded-lg"
+                    value={carForm.type}
+                    onChange={(e) => setCarForm({ ...carForm, type: e.target.value })}
+                  >
+                    <option value="MPV">MPV</option>
+                    <option value="SUV">SUV</option>
+                    <option value="Sedan">Sedan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kapasitas Kursi</label>
+                  <input
+                    type="number"
+                    required
+                    className="w-full p-2 border rounded-lg"
+                    value={carForm.capacity}
+                    onChange={(e) => setCarForm({ ...carForm, capacity: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Harga Sewa / Hari (Rp)</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="350000"
+                  className="w-full p-2 border rounded-lg"
+                  value={carForm.price_per_day}
+                  onChange={(e) => setCarForm({ ...carForm, price_per_day: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">URL Foto Mobil</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full p-2 border rounded-lg"
+                  value={carForm.image_url}
+                  onChange={(e) => setCarForm({ ...carForm, image_url: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCarOpen(false)}
+                  className="w-1/2 py-2 border rounded-lg hover:bg-slate-50 font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-bold"
+                >
+                  Simpan Mobil
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
